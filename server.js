@@ -1,9 +1,17 @@
 const express = require("express");
+const cors = require("cors");
+
 const dbRoutes = require('./src/pets/routes');
 const app = express();
 const PORT = 3000;
 
-app.get(express.json());
+app.use(cors({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type"]
+}));
+
+app.use(express.json());
 
 app.get("/", (req, res) => {
     res.send("Hello Cruel World");
