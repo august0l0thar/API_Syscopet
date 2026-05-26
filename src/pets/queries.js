@@ -1,11 +1,11 @@
 const getUsuarios = 'SELECT * FROM usuarios';
-const getUsuarioById = "SELECT * FROM usuarios WHERE id_usuario = $1";
+const getUsuarioById = "SELECT * FROM usuarios WHERE id = $1";
 const checkEmailExists = "SELECT s FROM usuarios s WHERE s.email = $1";
 const addUsuario =  
-    "INSERT INTO Usuarios (nome, email, senha, criado_em) VALUES ($1, $2, $3, $4)";
-const deleteUsuario = "DELETE FROM usuarios WHERE id_usuario = $1";
-const updateUsuario = "UPDATE usuarios SET nome = $1 WHERE id_usuario = $2";
-const getUsuarioByEmail = "SELECT id_usuario FROM usuarios WHERE id_usuario = $1";
+    "INSERT INTO Usuarios (nome, email, senha) VALUES ($1, $2, $3)";
+const deleteUsuario = "DELETE FROM usuarios WHERE id = $1";
+const updateUsuario = "UPDATE usuarios SET nome = $1 WHERE id = $2";
+const getUsuarioByEmail = "SELECT nome, email, senha FROM usuarios WHERE email = $1";
 
 module.exports = {
     getUsuarios,
