@@ -69,15 +69,19 @@ const deleteUsuario = (req, res) => {
 
 const updateUsuario = (req, res) => {
     const id = parseInt(req.params.id);
-    const { nome } = req.body;
+    const { senha } = req.body;
 
-    pool.query(queries.getUsuarioById, [id], (error, results) => {
+    pool.query(queries.getUsuarioById, [id], async (error, results) => {
         const UsuarioNaoEncontrado = !results.rows.length;
         if (UsuarioNaoEncontrado){
             res.send("Usuario não está cadastrado no banco de dados.");
         }
 
-        pool.query(queries.updateUsuario, [nome, id], (error, results) => {
+        //criptografia da senha
+        const saltRounds = 10;
+        const senhaHash = await bcrypt.hash(senha, saltRounds);
+
+        pool.query(queries.updateUsuario, [senhaHash, id], (error, results) => {
             if (error) throw error;
             res.status(200).send("Usuário atualizado com sucesso");
         });
