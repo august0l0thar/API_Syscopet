@@ -1,6 +1,20 @@
 const pool = require('../../db');
 const queries = require("./queries");
 const bcrypt = require('bcrypt');
+const nodemailer = require('nodemailer');
+
+//configuração nodemailer
+//Ethereal Email cria um e-mail falso de teste e mostra o painel de recebimento.
+//Mudar futuramente para GMAIl
+
+const transporter = nodemailer.createTransport({
+    host: "smtp.ethereal.email", // Mude para 'smtp.gmail.com' se usar Gmail
+    port: 587,
+    auth: {
+        user: "jameson.gorczany@ethereal.email", // Use variáveis de ambiente em produção
+        pass: "TCjUspVEYMMPya9cMf"
+    }
+});
 
 //Teste para verificar conexão com supabase
 /*pool.query('SELECT NOW()', (err, res) => {
@@ -224,6 +238,96 @@ const login = async (req, res) => {
     }
 };
 
+
+const esqueceuSenha = async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({ erro: "O email é obrigatório" });
+        }
+
+        //verifica se o usuário existe
+        const { rows } = await pool.query(queries.getUsuarioIdByEmail, [email]);
+
+        if (rows.length === 0) {
+            return res.status(200).json({ mensagem: "Se este email estiver cadastrado, você receberá um código." });
+        }
+
+        // Código de 6 dígitos e data de expiração (15 minutos)
+        const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+        // Salvar o token no banco
+        await pool.query(queries.updateResetToken, [resetCode, expiresAt, email]);
+
+        // Enviar o email
+        const mailOptions = {
+            from: '4U Pet <nao-responda@4upet.com>',
+            to: email,
+            subject: 'Recuperação de Senha',
+            text: `Esqueceu a senha, seu animal? \nSeu código para redefinir a senha é: ${resetCode}. Ele expira em 15 minutos.`,
+            html: `<p>Esqueceu a senha, seu animal?<br>Seu código para redefinir a senha é: <strong>${resetCode}</strong></p><p>Ele expira em 15 minutos.</p>`
+        };
+
+        //await transporter.sendMail(mailOptions);
+
+        const info = await transporter.sendMail(mailOptions);
+
+        const previewUrl = nodemailer.getTestMessageUrl(info);
+
+        console.log("E-mail de teste enviado! Visualize aqui: %s", previewUrl);
+
+        return res.status(200).json({ mensagem: "Se este email estiver cadastrado, você receberá um código." });
+
+    } catch (error) {
+        console.error("Erro no forgotSenha:", error);
+        return res.status(500).json({ erro: "Erro interno do servidor" });
+    }
+};
+
+const resetSenha = async (req, res) => {
+    try {
+        const { email, codigo, novaSenha } = req.body;
+
+        if (!email || !codigo || !novaSenha) {
+            return res.status(400).json({ erro: "Email, código e nova senha são obrigatórios" });
+        }
+
+        // Buscar o usuário e o token salvo
+        const { rows } = await pool.query(queries.getUsuarioWithToken, [email]);
+
+        if (rows.length === 0) {
+            return res.status(400).json({ erro: "Usuário não encontrado." });
+        }
+
+        const usuario = rows[0];
+
+        // Validação do código
+        if (usuario.reset_token !== codigo) {
+            return res.status(400).json({ erro: "Código inválido." });
+        }
+
+        if (new Date() > new Date(usuario.reset_token_expira_em)) {
+            return res.status(400).json({ erro: "O código expirou. Solicite um novo." });
+        }
+
+        // Criptografia da Senha
+        const saltRounds = 10;
+        const senhaHash = await bcrypt.hash(novaSenha, saltRounds);
+
+        // Atualizar a senha e resetar token
+        await pool.query(queries.updateUsuario, [senhaHash, usuario.id]);
+        await pool.query(queries.clearResetToken, [usuario.id]);
+
+        return res.status(200).json({ mensagem: "Senha redefinida com sucesso." });
+
+    } catch (error) {
+        console.error("Erro no resetSenha:", error);
+        return res.status(500).json({ erro: "Erro interno do servidor" });
+    }
+};
+
 module.exports = {
     getUsuario,
     getUsuarioById,
@@ -231,4 +335,6 @@ module.exports = {
     deleteUsuario,
     updateUsuario,
     login,
+    esqueceuSenha,
+    resetSenha,
 };
