@@ -1,12 +1,11 @@
 const pool = require('../../db');
-const queries = require("./queries");
+const queries = require("../queries/usuarioQueries");
 const bcrypt = require('bcrypt');
 const nodemailer = require('nodemailer');
 
 //configuração nodemailer
 //Ethereal Email cria um e-mail falso de teste e mostra o painel de recebimento.
 //Mudar futuramente para GMAIl
-
 const transporter = nodemailer.createTransport({
     host: "smtp.ethereal.email", // Mude para 'smtp.gmail.com' se usar Gmail
     port: 587,
@@ -265,9 +264,11 @@ const esqueceuSenha = async (req, res) => {
         const mailOptions = {
             from: '4U Pet <nao-responda@4upet.com>',
             to: email,
-            subject: 'Recuperação de Senha',
-            text: `Esqueceu a senha, seu animal? \nSeu código para redefinir a senha é: ${resetCode}. Ele expira em 15 minutos.`,
-            html: `<p>Esqueceu a senha, seu animal?<br>Seu código para redefinir a senha é: <strong>${resetCode}</strong></p><p>Ele expira em 15 minutos.</p>`
+            subject: 'Redefinição de Senha',
+            text: `Olá,\nRecebemos uma solicitação para redefinir a senha da sua conta.\nUtilize o código abaixo para criar uma nova senha: \n\n${resetCode}. \n\nEste código é válido por 15 minutos.
+            \nSe você não solicitou a redefinição de senha, ignore este e-mail. Sua conta permanecerá segura e nenhuma alteração será realizada. \nAtenciosamente,\nEquipe 4U PET.`,
+            html: `<p>Olá</p><p>Recebemos uma solicitação para redefinir a senha da sua conta.</p><p>Utilize o código abaixo para criar uma nova senha: </p><p><strong>${resetCode}</strong></p><p>Ele expira em 15 minutos.</p>
+            <p>Atenciosamente, Equipe 4U PET.</p>`
         };
 
         //await transporter.sendMail(mailOptions);
