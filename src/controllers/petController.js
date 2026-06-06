@@ -1,6 +1,13 @@
 const pool = require('../../db');
+//queries do usuário
+const usuarioQueries = require("../queries/usuarioQueries");
+//queries dos pets
 const queries = require("../queries/petQueries");
+//Validações dos dados
 const { validarPet } = require('../validators/petValidator');
+//armazenamento das fotos
+const supabase = require('../config/supabaseConfig');
+const path = require('path');
 
 const getPets = (req, res) => {
     pool.query(queries.getPets, (error, results) => {
@@ -37,6 +44,35 @@ const getPetById = (req, res) => {
 
         return res.status(200).json(results.rows);
     }); 
+};
+
+const getPetsByUsuario = (req, res) => {
+    const usuarioId = parseInt(req.params.usuarioId);
+
+    if (isNaN(usuarioId)) {
+        return res.status(400).json({ erro: "ID do usuário inválido" });
+    }
+
+
+    pool.query(usuarioQueries.getUsuarioById, [usuarioId], (error, results) => {
+        if (error) {
+            console.error(error);
+            return res.status(500).json({ erro: "Erro ao consultar usuário" });
+        }
+
+        if (results.rows.length === 0) {
+            return res.status(404).json({ erro: "Usuário não encontrado" });
+        }
+
+        pool.query(queries.getPetByUsuario, [usuarioId], (error, results) => {
+            if (error) {
+                console.error(error);
+                return res.status(500).json({ erro: "Erro ao buscar pets" });
+            }
+
+            return res.status(200).json(results.rows);
+        });
+    });
 };
 
 const addPet = async (req, res) => {
@@ -177,10 +213,92 @@ const deletePet = (req, res) => {
     });
 };
 
+const uploadFotoPet = async (req, res) => {
+  try {
+    const id = req.params.id;
+    
+    // Verificar se o pet existe
+    const petExists = await queries.getPetById(id); // Ajuste conforme sua função existente
+    if (!petExists || petExists.length === 0) {
+      return res.status(404).json({ error: 'Pet não encontrado' });
+    }
+
+    // Verificar se arquivo foi enviado
+    if (!req.file) {
+      return res.status(400).json({ error: 'Nenhuma imagem enviada' });
+    }
+
+    // Converter buffer para base64
+    const fileBuffer = req.file.buffer;
+    const fileName = `${id}-${Date.now()}${path.extname(req.file.originalname)}`;
+    
+    // Upload para o Supabase Storage
+    const { data, error } = await supabase.storage.from('fotos-pets').upload(fileName, fileBuffer, {
+        contentType: req.file.mimetype,
+        upsert: true // Substitui se já existir
+      });
+
+    if (error) {
+      console.error('Erro no upload:', error);
+      return res.status(500).json({ error: 'Erro ao fazer upload da imagem' });
+    }
+
+    // Gera URL pública
+    const { data: { publicUrl } } = supabase.storage.from('fotos-pets').getPublicUrl(fileName);
+
+    // Atualiza o pet com a URL da foto no banco de dados
+    await queries.updateFotoPet(id, publicUrl); 
+
+    res.json({
+      message: 'Foto enviada com sucesso!',
+      photoUrl: publicUrl,
+      pet: { id: id }
+    });
+
+  } catch (error) {
+    console.error('Erro no uploadFotoPet:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
+
+const deleteFotoPet = async (req, res) => {
+  try {
+    const id = req.params.id;
+
+    // Buscar URL atual da foto
+    const pet = await queries.getPetById(id);
+    if (!pet || pet.length === 0) {
+      return res.status(404).json({ error: 'Pet não encontrado' });
+    }
+
+    const photoUrl = pet[0].photo_url;
+    
+    // Se tiver foto, deletar do storage
+    if (photoUrl) {
+      // Extrair nome do arquivo da URL
+      const fileName = photoUrl.split('/').pop();
+      
+      await supabase.storage.from('fotos-pets').remove([fileName]);
+    }
+
+    // Atualizar banco para null
+    await queries.updatePetPhoto(id, null);
+
+    res.json({ message: 'Foto removida com sucesso!' });
+
+  } catch (error) {
+    console.error('Erro no deletePetPhoto:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
+
 module.exports = {
     getPets,
     getPetById,
+    getPetsByUsuario,
     addPet,
     updatePet,
     deletePet,
+    uploadFotoPet,
+    deleteFotoPet,
 };
