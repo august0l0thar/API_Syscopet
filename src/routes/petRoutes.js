@@ -5,6 +5,14 @@ const upload = require('../middleware/upload');
 
 router.get('/usuario/:usuarioId', petController.getPetsByUsuario);
 
+//Raças
+router.get("/raca", petController.getRacas);
+//Adicionar Raca (Somente Dev, não utilizar no app)
+router.post("/raca", petController.addRaca);
+router.get("/raca/:id", petController.getRacaById);
+router.put("/raca/:id", petController.updateRaca);
+
+//pets
 router.get("/", petController.getPets);
 router.post("/", petController.addPet);
 router.get("/:id", petController.getPetById);
@@ -23,5 +31,6 @@ router.delete(
   '/:id/photo',
   petController.deleteFotoPet
 );
+
 
 module.exports = router;

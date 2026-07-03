@@ -35,6 +35,12 @@ const updateFotoPet = async (id, photoUrl) => {
   return result.rows[0];
 };
 
+//Raças
+const getRacas = "SELECT * FROM raca";
+const getRacaById = "SELECT * FROM raca WHERE id = $1";
+const addRaca = "INSERT into raca (nome, especie, peso_min, peso_max, altura_min, altura_max) VALUES ($1, $2, $3, $4, $5, $6)";
+const updateRaca = "UPDATE raca SET nome = $1, especie = $2, peso_min = $3, peso_max = $4, altura_min = $5, altura_max = $6 WHERE id = $7";
+
 module.exports = {
     getPets,
     getPetById,
@@ -43,4 +49,8 @@ module.exports = {
     deletePet,
     criarUpdatePet,
     updateFotoPet,
+    getRacas,
+    getRacaById,
+    addRaca,
+    updateRaca,
 };
