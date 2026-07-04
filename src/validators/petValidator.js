@@ -1,3 +1,5 @@
+const porteCalculator = require('./porteCalculator');
+
 // Valores permitidos para o ENUM especie
 const ESPECIES_VALIDAS = ['cao', 'gato', 'outro'];
 
@@ -132,7 +134,7 @@ const validarAltura = (altura) => {
  * @param {Object} dados - Objeto com os dados do pet
  * @param {boolean} isUpdate - true se for update (campos opcionais), false se for create*/
 
-const validarPet = (dados, isUpdate = false) => {
+const validarPet = async (dados, isUpdate = false) => {
     const erros = [];
     const dadosValidados = {};
     
@@ -183,13 +185,47 @@ const validarPet = (dados, isUpdate = false) => {
         }
     }
     
-    // Valida porte (se existir)
-    if (dados.porte !== undefined) {
-        const portesValidos = ['pequeno', 'medio', 'grande'];
-        if (!portesValidos.includes(dados.porte.toLowerCase())) {
-            erros.push(`Porte inválido. Valores permitidos: ${portesValidos.join(', ')}`);
+    // Valida id_raca (obrigatório para calcular porte)
+    if (!isUpdate || dados.id_raca !== undefined) {
+        if (!dados.id_raca) {
+            erros.push('id_raca é obrigatório');
+        } else if (isNaN(parseInt(dados.id_raca))) {
+            erros.push('id_raca deve ser um número válido');
         } else {
-            dadosValidados.porte = dados.porte.toLowerCase();
+            dadosValidados.id_raca = parseInt(dados.id_raca);
+        }
+    }
+    
+    // Se há erros básicos, retorna sem calcular porte
+    if (erros.length > 0) {
+        return { valido: false, erros, dados: dadosValidados };
+    }
+    
+    // Calcula o porte se tiver peso e id_raca
+    if (dadosValidados.peso !== undefined && dadosValidados.id_raca !== undefined) {
+        try {
+            const resultadoPorte = await porteCalculator.calcularPorte({
+                peso: dadosValidados.peso,
+                altura: dadosValidados.altura || null,
+                id_raca: dadosValidados.id_raca,
+                especie: dadosValidados.especie || null,
+                porte_estimado: dados.porte_estimado
+            });
+            
+            dadosValidados.porte = resultadoPorte.porte;
+            
+            return {
+                valido: true,
+                erros: [],
+                dados: dadosValidados,
+                alerta_saude: resultadoPorte.alerta_saude
+            };
+        } catch (error) {
+            if (error.status) {
+                return { valido: false, erros: [error.erro], dados: dadosValidados };
+            }
+            console.error('Erro ao calcular porte:', error);
+            return { valido: false, erros: ['Erro interno ao calcular porte'], dados: dadosValidados };
         }
     }
     
@@ -200,10 +236,11 @@ const validarPet = (dados, isUpdate = false) => {
     };
 };
 
+
 module.exports = {
     validarPet,
     validarEspecie,
     validarDataNascimento,
     validarPeso,
-    validarAltura
+    validarAltura,
 };

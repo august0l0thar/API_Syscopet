@@ -3,8 +3,12 @@ const pool = require('../../db');
 const usuarioQueries = require("../queries/usuarioQueries");
 //queries dos pets
 const queries = require("../queries/petQueries");
+//queries das raças
+const racaQueries = require("../queries/racaQueries");
 //Validações dos dados
-const { validarPet } = require('../validators/petValidator');
+const { validarPet } = require("../validators/petValidator");
+//Validação do porte
+const porteCalculator = require("../validators/porteCalculator");
 //armazenamento das fotos
 const supabase = require('../config/supabaseConfig');
 const path = require('path');
@@ -79,6 +83,22 @@ const addPet = async (req, res) => {
     try{
         const dados = req.body;
         const usuarioId = req.body.id_usuario; 
+        const nomeRaca = dados.raca;
+        const especie = dados.especie;
+
+        if (!nomeRaca || typeof nomeRaca !== 'string' || nomeRaca.trim() === '') {
+            return res.status(400).json({ erro: 'Nome da raça é obrigatório' });
+        }
+
+        const raca = await porteCalculator.getRacaByNome(nomeRaca, especie);
+
+        if (!raca) {
+            return res.status(404).json({ erro: `Raça "${nomeRaca}" não encontrada` });
+        }
+
+        const id_raca = raca.id;
+
+        dados.id_raca = id_raca;
 
         // Valida nome
         if (!dados.nome || typeof dados.nome !== 'string' || dados.nome.trim() === '') {
@@ -86,7 +106,7 @@ const addPet = async (req, res) => {
         }
 
         // Valida todos os campos (isUpdate = false)
-        const validacao = validarPet(dados, false);
+        const validacao = await validarPet(dados, false);
 
         if (!validacao.valido) {
             return res.status(400).json({ erros: validacao.erros });
@@ -99,6 +119,7 @@ const addPet = async (req, res) => {
             validacao.dados.peso,
             validacao.dados.altura || null,
             validacao.dados.porte || null,
+            id_raca,
             usuarioId
         ];
 
@@ -113,8 +134,13 @@ const addPet = async (req, res) => {
 
             console.log("Pet cadastrado");
 
+            alerta_saude = (validacao.alerta_saude) ? validacao.alerta_saude : null;
+            
+            
             return res.status(201).json({
-                mensagem: "Pet cadastrado com sucesso"
+                mensagem: "Pet cadastrado com sucesso",
+                porte: validacao.porte_calculado,
+                alerta: alerta_saude 
             });
         });
     } catch (err) {
@@ -125,7 +151,7 @@ const addPet = async (req, res) => {
     }
 };
 
-const updatePet = (req, res) => {
+const updatePet = async (req, res) => {
     const id = parseInt(req.params.id);
     const dados = req.body;
 
@@ -133,8 +159,19 @@ const updatePet = (req, res) => {
         return res.status(400).json({ erro: "ID inválido" });
     }
 
+    if (dados.raca) {
+        const raca = await porteCalculator.getRacaByNome(dados.raca, dados.especie);
+        
+        if (!raca) {
+            return res.status(404).json({ erro: `Raça "${dados.raca}" não encontrada` });
+        }
+        
+        dados.id_raca = raca.id;
+        delete dados.raca; // Remove o nome, usa só o ID
+    }
+
     // Valida os campos enviados (isUpdate = true)
-    const validacao = validarPet(dados, true);
+    const validacao = await validarPet(dados, true);
 
     if (!validacao.valido) {
         return res.status(400).json({ erros: validacao.erros });
@@ -170,7 +207,14 @@ const updatePet = (req, res) => {
                 return res.status(500).json({ erro: "Erro ao atualizar pet" });
             }
 
-            return res.status(200).json({ mensagem: "Pet atualizado com sucesso"});
+            porte_calculado = (validacao.dados.porte) ? validacao.dados.porte : null;
+            alerta_saude = (validacao.alerta_saude) ? validacao.alerta_saude : null;
+            
+            return res.status(200).json({ 
+                mensagem: "Pet atualizado com sucesso",
+                porte: porte_calculado,
+                alerta: alerta_saude,
+            });
         });
     });
 };
@@ -218,8 +262,8 @@ const uploadFotoPet = async (req, res) => {
     const id = req.params.id;
     
     // Verificar se o pet existe
-    const petExists = await queries.getPetById(id); // Ajuste conforme sua função existente
-    if (!petExists || petExists.length === 0) {
+    const petExists = await pool.query(queries.getPetById, [id]); // Ajuste conforme sua função existente
+    if (!petExists || petExists.rows.length === 0) {
       return res.status(404).json({ error: 'Pet não encontrado' });
     }
 
@@ -247,7 +291,7 @@ const uploadFotoPet = async (req, res) => {
     const { data: { publicUrl } } = supabase.storage.from('fotos-pets').getPublicUrl(fileName);
 
     // Atualiza o pet com a URL da foto no banco de dados
-    await queries.updateFotoPet(id, publicUrl); 
+    await pool.query(queries.updateFotoPet, [publicUrl, id]); 
 
     res.json({
       mensagem: 'Foto enviada com sucesso!',
@@ -266,7 +310,7 @@ const deleteFotoPet = async (req, res) => {
     const id = req.params.id;
 
     // Buscar URL atual da foto
-    const pet = await queries.getPetById(id);
+    const pet = await pool.query(queries.getPetById, [id]);
     if (!pet || pet.length === 0) {
       return res.status(404).json({ error: 'Pet não encontrado' });
     }
@@ -282,7 +326,7 @@ const deleteFotoPet = async (req, res) => {
     }
 
     // Atualizar banco para null
-    await queries.updatePetPhoto(id, null);
+    await pool.query(queries.updateFotoPet, [publicUrl, id]); 
 
     res.json({ mensagem: 'Foto removida com sucesso!' });
 
@@ -292,8 +336,7 @@ const deleteFotoPet = async (req, res) => {
   }
 };
 
-//Raças
-
+//Raças (Somente Dev, não expor funcionalidade ao usuário)
 const getRacas = (req, res) => {
     pool.query(queries.getRacas, (error, results) => {
         if (error) {
@@ -332,6 +375,22 @@ const getRacaById = (req, res) => {
 
         if (results.rows.length === 0) {
             return res.status(404).json({erro: "Raca não encontrada"});
+        }
+
+        return res.status(200).json(results.rows);
+    });
+}
+
+const getIdByRaca = (req, res) => {
+    const nome = req.params.nome;
+    pool.query(racaQueries.getIdByRaca, [nome], (error, results) => {
+        if (error) {
+            console.error(error);
+            return res.status(500).json({erro: "Erro ao consultar ID da raca"});
+        }
+
+        if (results.rows.length === 0) {
+            return res.status(404).json({erro: "Raca não encontrada pelo ID"});
         }
 
         return res.status(200).json(results.rows);
@@ -380,6 +439,7 @@ module.exports = {
     deleteFotoPet,
     getRacas,
     getRacaById,
+    getIdByRaca,
     addRaca,
     updateRaca,
 };
