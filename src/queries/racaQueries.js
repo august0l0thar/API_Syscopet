@@ -7,7 +7,7 @@ const getRacaById = "SELECT * FROM raca WHERE id = $1";
 //Busca ID da raça pelo nome
 const getIdByRaca = "SELECT id FROM raca WHERE nome = $1";
 // Busca raças por espécie
-const getRacasByEspecie = "SELECT * FROM raca WHERE especie = $1";
+const getRacasByEspecie = "SELECT * FROM raca WHERE especie = $1 ORDER BY nome ASC";
 
 // Busca a raça SRD (Sem Raça Definida)
 const getRacaSRD = "SELECT * FROM racas WHERE UPPER(nome) LIKE 'SRD%'";

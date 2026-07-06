@@ -83,20 +83,26 @@ const addPet = async (req, res) => {
     try{
         const dados = req.body;
         const usuarioId = req.body.id_usuario; 
-        const nomeRaca = dados.raca;
         const especie = dados.especie;
 
-        if (!nomeRaca || typeof nomeRaca !== 'string' || nomeRaca.trim() === '') {
-            return res.status(400).json({ erro: 'Nome da raça é obrigatório' });
+        // Verifica se veio id_raca OU raca (nome)
+        let id_raca = dados.id_raca;
+        
+        if (!id_raca && dados.raca) {
+            // Se veio o nome, busca o ID
+            const raca = await porteCalculator.getRacaByNome(dados.raca, dados.especie);
+            
+            if (!raca) {
+                return res.status(404).json({ erro: `Raça "${dados.raca}" não encontrada` });
+            }
+            
+            id_raca = raca.id;
         }
-
-        const raca = await porteCalculator.getRacaByNome(nomeRaca, especie);
-
-        if (!raca) {
-            return res.status(404).json({ erro: `Raça "${nomeRaca}" não encontrada` });
+        
+        // Valida se tem id_raca
+        if (!id_raca) {
+            return res.status(400).json({ erro: 'Raça é obrigatória' });
         }
-
-        const id_raca = raca.id;
 
         dados.id_raca = id_raca;
 
@@ -338,13 +344,35 @@ const deleteFotoPet = async (req, res) => {
 
 //Raças (Somente Dev, não expor funcionalidade ao usuário)
 const getRacas = (req, res) => {
-    pool.query(queries.getRacas, (error, results) => {
+    const { especie } = req.query;
+    
+    // Se não passou espécie, retorna todas
+    if (!especie) {
+        pool.query(queries.getRacas, (error, results) => {
+            if (error) {
+                console.error(error);
+                return res.status(500).json({erro: "Erro ao buscar racas"});
+            }
+            return res.status(200).json(results.rows);
+        })
+        return;
+    }
+    
+    // Valida a espécie
+    const especiesValidas = ['cao', 'gato'];
+    if (!especiesValidas.includes(especie.toLowerCase())) {
+        return res.status(400).json({ 
+            erro: `Espécie inválida. Valores permitidos: ${especiesValidas.join(', ')}` 
+        });
+    }
+    
+    pool.query(racaQueries.getRacasByEspecie, [especie.toLowerCase()], (error, results) => {
         if (error) {
             console.error(error);
-            return res.status(500).json({erro: "Erro ao buscar racas"});
+            return res.status(500).json({ erro: "Erro ao buscar raças" });
         }
         return res.status(200).json(results.rows);
-    })
+    });
 }
 
 const addRaca = (req, res) => {
@@ -437,6 +465,7 @@ module.exports = {
     deletePet,
     uploadFotoPet,
     deleteFotoPet,
+    
     getRacas,
     getRacaById,
     getIdByRaca,
