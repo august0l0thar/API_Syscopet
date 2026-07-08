@@ -266,10 +266,6 @@ const deletePet = (req, res) => {
 const uploadFotoPet = async (req, res) => {
   try {
     const id = req.params.id;
-    console.log('entrou no uploadFoto do controller');
-    // 🔍 DEBUG: Ver qual URL o Supabase está tentando acessar
-    console.log('🔍 SUPABASE_URL:', process.env.SUPABASE_URL);
-    console.log('🔍 SUPABASE_KEY:', process.env.SUPABASE_KEY ? 'definida' : 'NÃO DEFINIDA');
     
     // Verificar se o pet existe
     const petExists = await pool.query(queries.getPetById, [id]);
