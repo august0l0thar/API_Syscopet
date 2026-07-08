@@ -266,9 +266,13 @@ const deletePet = (req, res) => {
 const uploadFotoPet = async (req, res) => {
   try {
     const id = req.params.id;
+    console.log('entrou no uploadFoto do controller');
+    // 🔍 DEBUG: Ver qual URL o Supabase está tentando acessar
+    console.log('🔍 SUPABASE_URL:', process.env.SUPABASE_URL);
+    console.log('🔍 SUPABASE_KEY:', process.env.SUPABASE_KEY ? 'definida' : 'NÃO DEFINIDA');
     
     // Verificar se o pet existe
-    const petExists = await pool.query(queries.getPetById, [id]); // Ajuste conforme sua função existente
+    const petExists = await pool.query(queries.getPetById, [id]);
     if (!petExists || petExists.rows.length === 0) {
       return res.status(404).json({ error: 'Pet não encontrado' });
     }
@@ -282,6 +286,7 @@ const uploadFotoPet = async (req, res) => {
     const fileBuffer = req.file.buffer;
     const fileName = `${id}-${Date.now()}${path.extname(req.file.originalname)}`;
     
+    console.log("Antes do upload no supabase");
     // Upload para o Supabase Storage
     const { data, error } = await supabase.storage.from('fotos-pets').upload(fileName, fileBuffer, {
         contentType: req.file.mimetype,
@@ -292,6 +297,8 @@ const uploadFotoPet = async (req, res) => {
       console.error('Erro no upload:', error);
       return res.status(500).json({ error: 'Erro ao fazer upload da imagem' });
     }
+
+    console.log("Antes do upload no supabase");
 
     // Gera URL pública
     const { data: { publicUrl } } = supabase.storage.from('fotos-pets').getPublicUrl(fileName);
