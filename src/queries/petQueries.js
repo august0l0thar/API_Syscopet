@@ -29,10 +29,10 @@ const criarUpdatePet = (dados) => {
 };
 
 const updateFotoPet = async (id, photoUrl) => {
-  const query = `UPDATE pets SET url_foto = $${photoUrl} WHERE id = $${id} RETURNING *`;
-  const values = [photoUrl, id];
-  const result = await db.query(query, values);
-  return result.rows[0];
+    const query = `UPDATE pets SET url_foto = $1 WHERE id = $2 RETURNING *`;
+    const values = [photoUrl, id];
+    const result = await db.query(query, values);
+    return result.rows[0];
 };
 
 module.exports = {

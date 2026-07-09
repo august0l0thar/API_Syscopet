@@ -292,15 +292,11 @@ const uploadFotoPet = async (req, res) => {
       return res.status(500).json({ error: 'Erro ao fazer upload da imagem' });
     }
 
-    console.log("Antes do upload no supabase");
-
     // Gera URL pública
     const { data: { publicUrl } } = supabase.storage.from('fotos-pets').getPublicUrl(fileName);
 
-    console.log("Url publica da foto: ", publicUrl);
-
     // Atualiza o pet com a URL da foto no banco de dados
-    await pool.query(queries.updateFotoPet, [publicUrl, id]); 
+    await queries.updateFotoPet(id, publicUrl);
 
     res.json({
       mensagem: 'Foto enviada com sucesso!',
