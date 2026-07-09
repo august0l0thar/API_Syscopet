@@ -331,7 +331,7 @@ const deleteFotoPet = async (req, res) => {
     }
 
     // Atualizar banco para null
-    await pool.query(queries.updateFotoPet, [publicUrl, id]); 
+    await queries.updateFotoPet(id, publicUrl);
 
     res.json({ mensagem: 'Foto removida com sucesso!' });
 
