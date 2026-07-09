@@ -113,6 +113,15 @@ const calcularPorte = async (dados) => {
     if (!raca) {
         throw { status: 404, erro: 'Raça não encontrada' };
     }
+    
+    // Pula cálculo se for espécie 'outro'
+    if (raca.especie === 'outro') {
+        return { 
+            porte: null, 
+            alerta_saude: null,
+            dadosRaca: raca 
+        };
+    }
 
     // Verifica se é SRD
     const isSRD = raca.nome.toUpperCase().includes('SRD') && (especie ? raca.especie === especie : true);
