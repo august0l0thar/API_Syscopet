@@ -320,7 +320,7 @@ const deleteFotoPet = async (req, res) => {
       return res.status(404).json({ error: 'Pet não encontrado' });
     }
 
-    const photoUrl = pet[0].photo_url;
+    const photoUrl = pet.rows[0].url_foto;
     
     // Se tiver foto, deletar do storage
     if (photoUrl) {
@@ -330,6 +330,8 @@ const deleteFotoPet = async (req, res) => {
       await supabase.storage.from('fotos-pets').remove([fileName]);
     }
 
+    const publicUrl = null;
+    
     // Atualizar banco para null
     await queries.updateFotoPet(id, publicUrl);
 

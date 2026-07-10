@@ -37,8 +37,8 @@ const addLembrete = (req, res) => {
 
     if(!dados.data_hora) return res.status(400).json({ erro: 'Data e hora são obrigatórias' });
 
-    dados.recorrencia = (!dados.recorrencia) ? dados.recorrencia : 'unica';
-    
+    if (!recorrenciasValidas.includes(dados.recorrencia.toLowerCase())) dados.recorrencia = 'unica';
+
     dados.ativo = (dados.ativo) ? dados.ativo : true;
 
     pool.query(lembreteQueries.addLembrete, [dados], (error, results) => {
