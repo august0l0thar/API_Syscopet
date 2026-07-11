@@ -2,15 +2,17 @@ const express = require('express');
 const router = express.Router();
 const petController = require('../controllers/petController');
 const racaController = require('../controllers/racaController');
+const lembreteController = require('../controllers/lembreteController'); 
 const upload = require('../middleware/upload');
 
 router.get('/usuario/:usuarioId', petController.getPetsByUsuario);
 
 //Lembretes
-/*
-router.get("/lembretes", petController.getLembretes);
-router.post("/lembretes", petController.addlembretes);
-*/
+
+router.post("/lembretes", lembreteController.addLembrete);
+router.get("/lembretes/:id", lembreteController.getLembretePet);
+router.delete("/lembretes/:id", lembreteController.deleteLembrete);
+
 //Raças
 router.get("/raca", racaController.getRacas);
 //Adicionar Raca (Somente Dev, não utilizar no app)

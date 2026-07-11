@@ -6,20 +6,14 @@ const getLembretePet = (req, res) => {
     const id = parseInt(req.params.id);
 
     if (isNaN(id)) {
-        return res.status(400).json({erro: "ID inválido"});
+        return res.status(400).json({ erro: "ID inválido" });
     }
 
-    pool.queries(lembreteQueries.getLembretePet, [id], (error, results) => {
+    pool.query(lembreteQueries.getLembretePet, [id], (error, results) => {
         if (error) {
             console.error(error);
             return res.status(500).json({
                 erro: "Erro ao consultar lembretes"
-            });
-        }
-
-        if (results.rows.length === 0) {
-            return res.status(404).json({
-                erro: "Lembrete não encontrado"
             });
         }
 
@@ -28,20 +22,86 @@ const getLembretePet = (req, res) => {
 }
 
 const addLembrete = (req, res) => {
-    const dados = req.body;
-    const recorrenciasValidas = ['unica', 'diaria', 'semanal', 'mensal', 'outro']; 
+    try{
+        const { id_pet, titulo, descricao, data_hora, tipo, recorrencia } = req.body;
 
-    if(!dados.titulo) return res.status(400).json({ erro: 'Titulo é obrigatório' });
+        if (!id_pet || !titulo || !data_hora || !tipo || !recorrencia) {
+            return res.status(400).json({ erro: "Campos obrigatórios faltando" });
+        }
 
-    dados.descricao = (dados.descricao) ? dados.descricao : null;
+        const dataLembrete = new Date(data_hora);
+        const agora = new Date();
 
-    if(!dados.data_hora) return res.status(400).json({ erro: 'Data e hora são obrigatórias' });
+        if (dataLembrete < agora) {
+            return res.status(400).json({ erro: "Não é possível criar lembretes com data/hora no passado" });
+        }
+        
+        const tiposValidos = ['alimentacao', 'banho', 'medicamento', 'consulta', 'vacina'];
+        const recorrenciasValidas = ['unica', 'diaria', 'semanal', 'mensal', 'outro'];
 
-    if (!recorrenciasValidas.includes(dados.recorrencia.toLowerCase())) dados.recorrencia = 'unica';
+        if (!tiposValidos.includes(tipo)) {
+            return res.status(400).json({ erro: "Tipo de lembrete inválido" });
+        }
+        if (!recorrenciasValidas.includes(recorrencia)) {
+            return res.status(400).json({ erro: "Tipo de recorrência inválido" });
+        }
 
-    dados.ativo = (dados.ativo) ? dados.ativo : true;
+        const ativo = req.body.ativo = (req.body.ativo) ? req.body.ativo : true;
 
-    pool.query(lembreteQueries.addLembrete, [dados], (error, results) => {
+        pool.query(lembreteQueries.addLembrete, [titulo, descricao, data_hora, tipo, recorrencia, ativo, id_pet,], (error, results) => {
+            if (error) {
+                console.error(error);
+                return res.status(500).json({ erro: "Erro ao criar lembrete" });
+            }
+            return res.status(201).json({ 
+                mensagem: "Lembrete criado com sucesso"
+            });
+        }); 
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ erro: "Erro interno do servidor" });
+    }    
+}
 
+const deleteLembrete = (req, res) => {
+    const id = req.params.id;
+
+    if (isNaN(id)) {
+        return res.status(400).json({ erro: "ID inválido" });
+    }
+
+    pool.query(lembreteQueries.getLembretePet, [id], (error, results) => {
+        if (error) {
+            console.error(error);
+            return res.status(500).json({
+                erro: "Erro ao consultar lembrete"
+            });
+        }
+
+        //Verifica se o usuário existe
+        if (results.rows.length === 0) {
+            return res.status(404).json({
+                erro: "Lembrete não encontrado"
+            });
+        }
+
+        pool.query(lembreteQueries.deleteLembrete, [id], (error, results) => {
+            if (error) {
+                console.error(error);
+                return res.status(500).json({
+                    erro: "Erro ao remover lembrete"
+                });
+            }
+            
+            return res.status(200).json({
+                mensagem: "Lembrete removido com sucesso"
+            });
+        });
     });
 }
+
+module.exports = {
+    getLembretePet,
+    addLembrete,
+    deleteLembrete,
+};
