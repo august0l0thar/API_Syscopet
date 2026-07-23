@@ -1,13 +1,7 @@
 const pool = require('../../db');
 const queries = require("../queries/usuarioQueries");
 const bcrypt = require('bcrypt');
-//envio de email
 const nodemailer = require('nodemailer');
-//login com google
-const { OAuth2Client } = require('google-auth-library');
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-//token JWT
-const jwt = require('jsonwebtoken');
 
 //configuração nodemailer
 //Ethereal Email cria um e-mail falso de teste e mostra o painel de recebimento.
@@ -20,6 +14,11 @@ const transporter = nodemailer.createTransport({
         pass: "TCjUspVEYMMPya9cMf"
     }
 });
+
+//Teste para verificar conexão com supabase
+/*pool.query('SELECT NOW()', (err, res) => {
+    console.log(err, res.rows);
+});*/
 
 const getUsuario = (req, res) => {
     pool.query(queries.getUsuarios, (error, results) => {
@@ -212,11 +211,6 @@ const login = async (req, res) => {
 
             const usuario = results.rows[0];
 
-            // Verifica se o usuário tem senha (caso ele tenha se cadastrado só com Google antes)
-            if (!usuario.senha) {
-                return res.status(401).json({ erro: "Esta conta foi criada com Google. Use o login do Google." });
-            }
-
             const senhaCorreta = await bcrypt.compare(
                 senha,
                 usuario.senha
@@ -228,16 +222,8 @@ const login = async (req, res) => {
                 });
             }
 
-            //token JWT
-            const token = jwt.sign(
-                { id: usuario.id, email: usuario.email },
-                process.env.JWT_SECRET, 
-                { expiresIn: '7d' } 
-            );
-
             return res.status(200).json({
                 message: "Login realizado com sucesso.",
-                token,
                 user: {
                     id: usuario.id,
                     nome: usuario.nome,
@@ -251,71 +237,6 @@ const login = async (req, res) => {
     }
 };
 
-const loginGoogle = async (req, res) => {
-    const { idToken } = req.body;
-
-    if (!idToken) {
-        return res.status(400).json({ erro: "Token do Google é obrigatório" });
-    }
-
-    try {
-        // Validação do token com o Google
-        const ticket = await client.verifyIdToken({
-            idToken,
-            audience: process.env.GOOGLE_CLIENT_ID, 
-        });
-        const payload = ticket.getPayload();
-        
-        const googleId = payload['sub'];
-        const email = payload['email'];
-        const nome = payload['name'];
-        const foto = payload['picture'];
-
-        // Busca usuário pelo google_id
-        const resultGoogle = await pool.query(queries.getUsuarioByGoogleId, [googleId]);
-        let usuario = resultGoogle.rows[0];
-
-        if (usuario) {
-            // Cenário A: Usuário já existe e já tem o Google vinculado. Tudo certo.
-        } else {
-            // Cenário B: Usuário não tem google_id, mas e se o EMAIL já existir no banco?
-            // (Ex: Ele se cadastrou com senha antes, e agora quer usar o botão do Google)
-            const resultEmail = await pool.query(queries.getUsuarioByEmail, [email]);
-            
-            if (resultEmail.rows.length > 0) {
-                usuario = resultEmail.rows[0];
-                
-                // Vincula o google_id a esta conta existente para os próximos logins
-                await pool.query(queries.updateUsuarioGoogleId, [googleId, usuario.id]);
-            } else {
-                // Cenário C: Conta totalmente nova. Cria o usuário.
-                const insertResult = await pool.query(queries.addUsuarioGoogle, [nome, email, googleId]);
-                usuario = insertResult.rows[0];
-            }
-        }
-
-        //Gera o SEU token JWT
-        const token = jwt.sign(
-            { id: usuario.id, email: usuario.email }, 
-            process.env.JWT_SECRET, 
-            { expiresIn: '7d' }
-        );
-
-        return res.status(200).json({
-            mensagem: "Login com Google realizado com sucesso",
-            token,
-            usuario: { 
-                id: usuario.id, 
-                nome: usuario.nome, 
-                email: usuario.email 
-            }
-        });
-
-    } catch (error) {
-        console.error("Erro na validação do Google:", error);
-        return res.status(401).json({ erro: "Token do Google inválido ou expirado" });
-    }
-};
 
 const esqueceuSenha = async (req, res) => {
     try {
@@ -415,7 +336,6 @@ module.exports = {
     deleteUsuario,
     updateUsuario,
     login,
-    loginGoogle,
     esqueceuSenha,
     resetSenha,
 };
