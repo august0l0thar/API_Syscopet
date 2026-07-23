@@ -124,6 +124,7 @@ const addPet = async (req, res) => {
             validacao.dados.altura || null,
             validacao.dados.porte || null,
             id_raca,
+            nome_raca,
             usuarioId
         ];
 

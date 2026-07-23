@@ -2,7 +2,7 @@ const db = require('../../db');
 
 const getPets = 'SELECT id, nome FROM pets ORDER BY id ASC';
 const getPetById = "SELECT * FROM pets WHERE id = $1";
-const getPetByUsuario = "SELECT * FROM pets WHERE id_usuario = $1";
+const getPetByUsuario = "SELECT p.id, p.nome, p.criado_em, p.especie, p. data_nascimento, p.peso, p.altura, p.porte, p.id_usuario, p.url_foto, p.id_raca, r.nome AS nome_raca FROM pets p LEFT JOIN raca r ON r.id = p.id_raca WHERE p.id_usuario = $1 ORDER BY p.id ASC";
 const addPet = "INSERT INTO pets (nome, especie, data_nascimento, peso, altura, porte, id_raca, id_usuario) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)";
 const deletePet = "DELETE FROM pets WHERE id = $1";
 
