@@ -305,7 +305,7 @@ const loginGoogle = async (req, res) => {
             mensagem: "Login com Google realizado com sucesso",
             token,
             usuario: { 
-                id: usuario.id, 
+                id: parseInt(usuario.id), 
                 nome: usuario.nome, 
                 email: usuario.email 
             }
