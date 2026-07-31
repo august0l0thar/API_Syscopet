@@ -83,6 +83,10 @@ const addPet = async (req, res) => {
         const usuarioId = req.body.id_usuario; 
         const especie = dados.especie;
 
+        if(!usuarioId){
+            return res.status(404).json({erro: 'ID do usuário é obrigatório Julio'});
+        }
+
         // Verifica se veio id_raca OU raca (nome)
         let id_raca = dados.id_raca;
         
@@ -158,11 +162,13 @@ const addPet = async (req, res) => {
 const updatePet = async (req, res) => {
     const id = parseInt(req.params.id);
     const dados = req.body;
+    let id_raca = dados.id_raca;
 
     if (isNaN(id)) {
         return res.status(400).json({ erro: "ID inválido" });
     }
-
+    
+    //se não vier id da raca usa o nome
     if (dados.raca) {
         const raca = await porteCalculator.getRacaByNome(dados.raca, dados.especie);
         
@@ -172,6 +178,10 @@ const updatePet = async (req, res) => {
         
         dados.id_raca = raca.id;
         delete dados.raca; // Remove o nome, usa só o ID
+    }
+    
+    if(isNaN(id_raca)) {
+        return res.status(400).json({ erro: "ID da raça inválido"})
     }
 
     // Valida os campos enviados (isUpdate = true)

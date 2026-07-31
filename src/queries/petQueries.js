@@ -7,7 +7,7 @@ const addPet = "INSERT INTO pets (nome, especie, data_nascimento, peso, altura, 
 const deletePet = "DELETE FROM pets WHERE id = $1";
 
 const criarUpdatePet = (dados) => {
-    const camposPermitidos = ['nome', 'especie', 'data_nascimento', 'peso', 'altura', 'porte'];
+    const camposPermitidos = ['nome', 'especie', 'data_nascimento', 'peso', 'altura', 'porte', 'id_raca'];
     const campos = [];
     const valores = [];
     let indice = 1;
