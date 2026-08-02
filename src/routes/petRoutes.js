@@ -13,6 +13,8 @@ router.post("/lembretes", lembreteController.addLembrete);
 router.get("/lembretes/:id", lembreteController.getLembretePet);
 router.delete("/lembretes/:id", lembreteController.deleteLembrete);
 
+router.get("/lembretes/ocorrencias/:id", lembreteController.getOcorrenciasLembrete);
+
 //Raças
 router.get("/raca", racaController.getRacas);
 //Adicionar Raca (Somente Dev, não utilizar no app)

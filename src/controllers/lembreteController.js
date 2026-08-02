@@ -1,6 +1,8 @@
 const pool = require('../../db');
 //Queries dos lembretes
 const lembreteQueries = require('../queries/lembreteQueries');
+// Cálculo das recorrências
+const { calcularProximasOcorrencias } = require('../utils/recorrenciaCalculator');
 
 const getLembretePet = (req, res) => {
     const id = parseInt(req.params.id);
@@ -100,8 +102,44 @@ const deleteLembrete = (req, res) => {
     });
 }
 
+const getOcorrenciasLembrete = (req, res) => {
+    const id = parseInt(req.params.id);
+    const quantidade = parseInt(req.query.quantidade) || 10;
+
+    if (isNaN(id)) {
+        return res.status(400).json({ erro: "ID inválido" });
+    }
+
+    pool.query(lembreteQueries.getLembretePet, [id], (error, results) => {
+        if (error) {
+            console.error(error);
+            return res.status(500).json({ erro: "Erro ao consultar lembrete" });
+        }
+
+        if (results.rows.length === 0) {
+            return res.status(404).json({ erro: "Lembrete não encontrado" });
+        }
+
+        const lembrete = results.rows[0];
+        
+        // Calcula as próximas ocorrências
+        const ocorrencias = calcularProximasOcorrencias(
+            lembrete.data_hora,
+            lembrete.recorrencia,
+            lembrete.ativo,
+            quantidade
+        );
+
+        return res.status(200).json({
+            lembrete,
+            proximas_ocorrencias: ocorrencias
+        });
+    });
+};
+
 module.exports = {
     getLembretePet,
     addLembrete,
     deleteLembrete,
+    getOcorrenciasLembrete,
 };
