@@ -113,27 +113,36 @@ const getOcorrenciasLembrete = (req, res) => {
     pool.query(lembreteQueries.getLembretePet, [id], (error, results) => {
         if (error) {
             console.error(error);
-            return res.status(500).json({ erro: "Erro ao consultar lembrete" });
+            return res.status(500).json({ erro: "Erro ao consultar lembretes" });
         }
 
         if (results.rows.length === 0) {
-            return res.status(404).json({ erro: "Lembrete não encontrado" });
+            return res.status(200).json([]);
         }
-
-        const lembrete = results.rows[0];
         
-        // Calcula as próximas ocorrências
-        const ocorrencias = calcularProximasOcorrencias(
-            lembrete.data_hora,
-            lembrete.recorrencia,
-            lembrete.ativo,
-            quantidade
-        );
+        // Cálculo das ocorrências de cada lembrete
+        const lembretesComOcorrencias = results.rows.map(lembrete => {
+            const ocorrencias = calcularProximasOcorrencias(
+                lembrete.data_hora,
+                lembrete.recorrencia,
+                lembrete.ativo,
+                quantidade
+            );
 
-        return res.status(200).json({
-            lembrete,
-            proximas_ocorrencias: ocorrencias
+        // Retorna campos essenciais + ocorrências
+        return {
+                id: lembrete.id,
+                id_pet: lembrete.id_pet,
+                titulo: lembrete.titulo,
+                tipo: lembrete.tipo,
+                recorrencia: lembrete.recorrencia,
+                ativo: lembrete.ativo,
+                data_hora: lembrete.data_hora,
+                proximas_ocorrencias: ocorrencias
+            };
         });
+
+        return res.status(200).json(lembretesComOcorrencias);
     });
 };
 
