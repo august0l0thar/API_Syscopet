@@ -39,8 +39,6 @@ const getRacas = (req, res) => {
 const addRaca = (req, res) => {
     const {nome, especie, peso_min, peso_max, altura_min, altura_max} = req.body;
 
-    console.log(nome, especie, peso_min, peso_max, altura_min, altura_max);
-
     pool.query(racaQueries.addRaca, [nome, especie, peso_min, peso_max, altura_min, altura_max], (error, results) => {
         if (error) {
             console.error(error);

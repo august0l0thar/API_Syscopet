@@ -8,6 +8,7 @@ const rateLimit = require('express-rate-limit');
 
 const usuarioRoutes = require('./src/routes/usuarioRoutes');
 const petRoutes = require('./src/routes/petRoutes');
+const vacinaRoutes = require('./src/routes/vacinaRoutes');
 
 // == INICIALIZAÇÃO DO APP ==
 const app = express();
@@ -50,5 +51,6 @@ app.get("/", (req, res) => {
 
 app.use('/api/v1/usuarios', usuarioRoutes);
 app.use('/api/v1/pets', petRoutes);
+app.use('/api/v1/vacinas', vacinaRoutes);
 
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
