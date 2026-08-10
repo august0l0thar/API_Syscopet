@@ -11,6 +11,7 @@ router.get('/usuario/:usuarioId', petController.getPetsByUsuario);
 
 router.post("/lembretes", lembreteController.addLembrete);
 router.get("/lembretes/:id", lembreteController.getLembretePet);
+router.put("/lembretes/:id", lembreteController.updateLembrete);
 router.delete("/lembretes/:id", lembreteController.deleteLembrete);
 
 router.get("/lembretes/ocorrencias/:id", lembreteController.getOcorrenciasLembrete);

@@ -65,6 +65,36 @@ const addLembrete = (req, res) => {
     }    
 }
 
+const updateLembrete = (re, res) => {
+    const id = parseInt(req.params.id);
+    const {id_pet, titulo, descricao, data_hora, tipo, recorrencia} = req.body;
+
+    if (isNaN(id)) {
+        return res.status(400).json({ erro: "ID inválido" });
+    }
+    
+    // Verifica se a raca existe
+    pool.query(lembreteQueries.getLembretePet, [id], (error, results) => {
+        if (error) {
+            console.error(error);
+            return res.status(500).json({ erro: "Erro ao consultar lembrete" });
+        }
+
+        if (results.rows.length === 0) {
+            return res.status(404).json({ erro: "Lembrete não encontrado" });
+        }
+
+        pool.query(lembreteQueries.updateLembrete, [titulo, descricao, data_hora, tipo, recorrencia, id_pet], (error, results) => {
+            if (error) {
+                console.error(error);
+                return res.status(500).json({ erro: "Erro ao atualizar lembrete" });
+            }
+
+            return res.status(200).json({ mensagem: "Lembrete atualizado com sucesso"});
+        });
+    });
+}
+
 const deleteLembrete = (req, res) => {
     const id = req.params.id;
 
@@ -149,6 +179,7 @@ const getOcorrenciasLembrete = (req, res) => {
 module.exports = {
     getLembretePet,
     addLembrete,
+    updateLembrete,
     deleteLembrete,
     getOcorrenciasLembrete,
 };

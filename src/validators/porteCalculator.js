@@ -105,7 +105,8 @@ const classificarPortePorPeso = (peso, pesoMin, pesoMax) => {
  * @returns {Object} { porte, alerta_saude, dadosRaca }
  */
 const calcularPorte = async (dados) => {
-    const { peso, altura, id_raca, porte_estimado } = dados;
+    const { peso, altura, id_raca, especie } = dados;
+    let porte_estimado = dados.porte_estimado;
 
     // Busca a raça (cache ou banco)
     const raca = await getRaca(id_raca);
@@ -129,10 +130,12 @@ const calcularPorte = async (dados) => {
     if (isSRD) {
         // ============ CAMINHO 2: SRD ============
         if (!porte_estimado) {
-            throw { 
+            //SOLUÇÃO IMEDIATA - ALERTA DE GAMBIARRA
+            porte_estimado = 'medio';
+            /*throw { 
                 status: 400, 
                 erro: 'Para pets SRD (Sem Raça Definida), o campo "porte_estimado" é obrigatório' 
-            };
+            };*/
         }
 
         // Faixas padrão para SRD
