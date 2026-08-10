@@ -65,7 +65,7 @@ const addLembrete = (req, res) => {
     }    
 }
 
-const updateLembrete = (re, res) => {
+const updateLembrete = (req, res) => {
     const id = parseInt(req.params.id);
     const {id_pet, titulo, descricao, data_hora, tipo, recorrencia} = req.body;
 
@@ -74,7 +74,7 @@ const updateLembrete = (re, res) => {
     }
     
     // Verifica se a raca existe
-    pool.query(lembreteQueries.getLembretePet, [id], (error, results) => {
+    pool.query(lembreteQueries.getLembreteById, [id], (error, results) => {
         if (error) {
             console.error(error);
             return res.status(500).json({ erro: "Erro ao consultar lembrete" });
@@ -102,7 +102,7 @@ const deleteLembrete = (req, res) => {
         return res.status(400).json({ erro: "ID inválido" });
     }
 
-    pool.query(lembreteQueries.getLembretePet, [id], (error, results) => {
+    pool.query(lembreteQueries.getLembreteById, [id], (error, results) => {
         if (error) {
             console.error(error);
             return res.status(500).json({
