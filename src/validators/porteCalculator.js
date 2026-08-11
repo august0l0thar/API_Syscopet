@@ -204,24 +204,38 @@ const calcularPorte = async (dados) => {
         let porte;
         let alerta = null;
 
-        // Compara peso com a faixa da raça
-        if (peso < peso_min) {
-            porte = 'pequeno';
-            alerta = `ALERTA DE SAÚDE: O peso (${peso}kg) está ABAIXO do padrão da raça ${raca.nome} (${peso_min}kg - ${peso_max}kg). Considere consultar um veterinário.`;
-        } else if (peso > peso_max) {
-            porte = 'grande';
-            alerta = `ALERTA DE SAÚDE: O peso (${peso}kg) está ACIMA do padrão da raça ${raca.nome} (${peso_min}kg - ${peso_max}kg). Considere consultar um veterinário.`;
-        } else {
-            // Dentro da faixa - calcula o porte relativo
-            porte = classificarPortePorPeso(peso, peso_min, peso_max);
+        if (!peso_min && !peso_max) {
+            porte = 'medio'; 
         }
 
-        // Validação de sanidade adicional: desvio muito grande
-        const desvioPercentual = Math.abs(peso - ((peso_min + peso_max) / 2)) / ((peso_min + peso_max) / 2) * 100;
-        if (desvioPercentual > 80) {
-            alerta = (alerta ? alerta + ' ' : '') + `Peso está ${desvioPercentual.toFixed(0)}% fora da média da raça.`;
+        if(!peso_min){
+            porte = (peso > peso_max) ? 'grande' : 'medio';
+            if (porte == 'grande') {
+                 alerta = `ALERTA DE SAÚDE: O peso (${peso}kg) está ACIMA do limite conhecido da raça ${raca.nome} (Peso máximo = ${peso_max}kg). Considere consultar um veterinário.`;
+            }
+        }
+        else{
+            // Compara peso com a faixa da raça
+            if (peso < peso_min) {
+                porte = 'pequeno';
+                alerta = `ALERTA DE SAÚDE: O peso (${peso}kg) está ABAIXO do padrão da raça ${raca.nome} (${peso_min}kg - ${peso_max}kg). Considere consultar um veterinário.`;
+            } else if (peso > peso_max) {
+                porte = 'grande';
+                alerta = `ALERTA DE SAÚDE: O peso (${peso}kg) está ACIMA do padrão da raça ${raca.nome} (${peso_min}kg - ${peso_max}kg). Considere consultar um veterinário.`;
+            } else {
+                // Dentro da faixa - calcula o porte relativo
+                porte = classificarPortePorPeso(peso, peso_min, peso_max);
+            }
         }
 
+        if (peso_min && peso_max) {
+            // Validação de sanidade adicional: desvio muito grande
+            const desvioPercentual = Math.abs(peso - ((peso_min + peso_max) / 2)) / ((peso_min + peso_max) / 2) * 100;
+            if (desvioPercentual > 80) {
+                alerta = (alerta ? alerta + ' ' : '') + `Peso está ${desvioPercentual.toFixed(0)}% fora da média da raça.`;
+            }
+        }
+        
         return { 
             porte, 
             alerta_saude: alerta,
