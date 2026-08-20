@@ -3,6 +3,7 @@ const router = express.Router();
 const petController = require('../controllers/petController');
 const racaController = require('../controllers/racaController');
 const lembreteController = require('../controllers/lembreteController'); 
+const vacinaController = require('../controllers/vacinaController');
 const upload = require('../middleware/upload');
 
 router.get('/usuario/:usuarioId', petController.getPetsByUsuario);

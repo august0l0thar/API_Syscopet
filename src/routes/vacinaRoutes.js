@@ -10,4 +10,7 @@ router.get("/", vacinaController.getVacinas);
 
 router.put("/:id", vacinaController.updateVacina);
 
+router.get("/calendario/:petId", vacinaController.getCalendario);
+router.post("/registrar-dose", vacinaController.registrarDose);
+
 module.exports = router;

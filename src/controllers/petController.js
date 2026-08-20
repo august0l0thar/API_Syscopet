@@ -7,6 +7,8 @@ const queries = require("../queries/petQueries");
 const { validarPet } = require("../validators/petValidator");
 //Validação do porte
 const porteCalculator = require("../validators/porteCalculator");
+//Função para gerar calendário de vacina
+const { gerarCalendarioPet } = require('./vacinaController');
 //armazenamento das fotos
 const supabase = require('../config/supabaseConfig');
 const path = require('path');
@@ -143,6 +145,12 @@ const addPet = async (req, res) => {
             console.log("Pet cadastrado");
 
             alerta_saude = (validacao.alerta_saude) ? validacao.alerta_saude : null;
+
+            //GERA CALENDÁRIO DE VACINA
+            const petCriado = results.rows[0];
+            gerarCalendarioPet(petCriado).catch(err => {
+                console.error("Falha ao gerar calendário de vacinas:", err);
+            });
             
             
             return res.status(201).json({
