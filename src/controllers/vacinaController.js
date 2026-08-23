@@ -172,7 +172,7 @@ const registrarDose = async (req, res) => {
         const pet = petResult.rows[0];
 
         // Busca template
-        const templateResult = await pool.query(vacinaQueries.getVacinaById, [vacina_template_id]);
+        const templateResult = await pool.query(vacinaQueries.getVacinaByID, [vacina_template_id]);
         if (templateResult.rows.length === 0) {
             return res.status(404).json({ erro: "Vacina não encontrada no catálogo" });
         }
