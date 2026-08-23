@@ -84,7 +84,7 @@ const updateLembrete = (req, res) => {
             return res.status(404).json({ erro: "Lembrete não encontrado" });
         }
 
-        pool.query(lembreteQueries.updateLembrete, [titulo, descricao, data_hora, tipo, recorrencia, id_pet], (error, results) => {
+        pool.query(lembreteQueries.updateLembrete, [titulo, descricao, data_hora, tipo, recorrencia, id], (error, results) => {
             if (error) {
                 console.error(error);
                 return res.status(500).json({ erro: "Erro ao atualizar lembrete" });
