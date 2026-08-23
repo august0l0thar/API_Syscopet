@@ -12,13 +12,13 @@ const validarCompatibilidadeEspecie = async (pet, template) => {
     return null;
 };
 
-const validarDoseNumero = async (tipo, doseNumero, template) => {
+const validarDoseNumero = async (tipo, dose_numero, template) => {
     if (tipo === 'serie') {
-        if (!Number.isInteger(doseNumero) || doseNumero < 1 || doseNumero > template.quantidade_doses) {
+        if (!Number.isInteger(dose_numero) || dose_numero < 1 || dose_numero > template.quantidade_doses) {
             return `Dose invalida: a serie de "${template.nome}" tem ${template.quantidade_doses} dose(s).`;
         }
     } else if (tipo === 'reforco') {
-        if (!Number.isInteger(doseNumero) || doseNumero < 1) {
+        if (!Number.isInteger(dose_numero) || dose_numero < 1) {
             return 'Numero de reforco invalido.';
         }
     } else {
@@ -51,11 +51,11 @@ const validarStatus = async (status) => {
     return null;
 };
 
-const validarDataAplicacao = async (pet, template, dataAplicacao) => {
-    if (dataAplicacao == null) {
+const validarDataAplicacao = async (pet, template, data_aplicacao) => {
+    if (data_aplicacao == null) {
         return 'Informe a data de aplicacao.';
     }
-    const data = await parseData(dataAplicacao);
+    const data = await parseData(data_aplicacao);
     const dataHoje = await hoje();
     if (data > dataHoje) {
         return 'Nao e permitido registrar aplicacao com data futura.';
@@ -69,10 +69,10 @@ const validarDataAplicacao = async (pet, template, dataAplicacao) => {
 };
 
 // Alerta suave: aplicou antes do intervalo recomendado entre doses (nao bloqueia)
-const avisoIntervaloMinimo = async (doseAnterior, template, dataAplicacao) => {
+const avisoIntervaloMinimo = async (doseAnterior, template, data_aplicacao) => {
     if (!doseAnterior || !doseAnterior.data_aplicacao || !template.intervalo_doses) return null;
     const minima = await addDias(doseAnterior.data_aplicacao, template.intervalo_doses);
-    const data = await parseData(dataAplicacao);
+    const data = await parseData(data_aplicacao);
     if (data < minima) {
         const minimaFormatada = await formatarData(minima);
         return `Aplicada antes do intervalo recomendado de ${template.intervalo_doses} dias entre doses (minimo em ${minimaFormatada}).`;
@@ -89,9 +89,9 @@ const validarRegistroDose = async ({
     pet,
     template,
     tipo = 'serie',
-    doseNumero,
+    dose_numero,
     status,
-    dataAplicacao,
+    data_aplicacao,
     registroAlvo,
     doseAnterior,
 }) => {
@@ -100,15 +100,15 @@ const validarRegistroDose = async ({
 
     const verificacoes = [
         await validarCompatibilidadeEspecie(pet, template),
-        await validarDoseNumero(tipo, doseNumero, template),
+        await validarDoseNumero(tipo, dose_numero, template),
         await validarRegistroAlvo(registroAlvo),
         await validarDoseAnteriorRegularizada(doseAnterior),
         await validarStatus(status),
     ];
 
     if (status === 'aplicada') {
-        verificacoes.push(await validarDataAplicacao(pet, template, dataAplicacao));
-        const aviso = await avisoIntervaloMinimo(doseAnterior, template, dataAplicacao);
+        verificacoes.push(await validarDataAplicacao(pet, template, data_aplicacao));
+        const aviso = await avisoIntervaloMinimo(doseAnterior, template, data_aplicacao);
         if (aviso) avisos.push(aviso);
     }
 
