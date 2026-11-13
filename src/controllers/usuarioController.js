@@ -1,22 +1,18 @@
 const pool = require('../../db');
 const queries = require("../queries/usuarioQueries");
 const bcrypt = require('bcrypt');
+
 //envio de email
-const nodemailer = require('nodemailer');
+const { BrevoClient } = require('@getbrevo/brevo');
+// Inicializa o cliente com a chave da API das variáveis de ambiente
+const brevo = new BrevoClient({ apiKey: process.env.BREVO_API_KEY });
+
 //login com google
 const { OAuth2Client } = require('google-auth-library');
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 //token JWT
 const jwt = require('jsonwebtoken');
 
-//configuração nodemailer
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-    },
-});
 
 const getUsuario = (req, res) => {
     pool.query(queries.getUsuarios, (error, results) => {
@@ -322,46 +318,52 @@ const esqueceuSenha = async (req, res) => {
             return res.status(400).json({ erro: "O email é obrigatório" });
         }
 
-        //verifica se o usuário existe
+        // Verifica se o usuário existe
         const { rows } = await pool.query(queries.getUsuarioIdByEmail, [email]);
 
+        // Por segurança, não revelamos se o e-mail existe ou não
         if (rows.length === 0) {
             return res.status(200).json({ mensagem: "Se este email estiver cadastrado, você receberá um código." });
         }
 
-        // Código de 6 dígitos e data de expiração (15 minutos)
+        // Gera código e data de expiração (15 minutos)
         const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
         const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
-        // Salvar o token no banco
+        // Salva no banco
         await pool.query(queries.updateResetToken, [resetCode, expiresAt, email]);
 
-        // Enviar o email
-        const mailOptions = {
-            from: `4U Pet <${process.env.EMAIL_USER}>`,
-            to: email,
-            subject: 'Redefinição de Senha',
-            text: `Olá,\nRecebemos uma solicitação para redefinir a senha da sua conta.\nUtilize o código abaixo para criar uma nova senha: \n\n${resetCode}. \n\nEste código é válido por 15 minutos.
-            \nSe você não solicitou a redefinição de senha, ignore este e-mail. Sua conta permanecerá segura e nenhuma alteração será realizada. \nAtenciosamente,\nEquipe 4U PET.`,
-            html: `<p>Olá</p><p>Recebemos uma solicitação para redefinir a senha da sua conta.</p><p>Utilize o código abaixo para criar uma nova senha: </p><p><strong>${resetCode}</strong></p><p>Ele expira em 15 minutos.</p>
-            <p>Atenciosamente, Equipe 4U PET.</p>`
+        // Envia o e-mail via Brevo 
+        const emailData = {
+            sender: { 
+                name: "4U Pet", 
+                email: process.env.EMAIL_USER 
+            },
+            to: [{ email: email }],
+            subject: "Código de Recuperação de Senha - 4U Pet 🐾",
+            htmlContent: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+                    <h2 style="color: #2c3e50;">Redefinição de Senha</h2>
+                    <p>Olá!</p>
+                    <p>Recebemos uma solicitação para redefinir a senha da sua conta. Utilize o código abaixo:</p>
+                    <div style="background: #f4f6f8; border: 2px dashed #3498db; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0;">
+                        <span style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #2c3e50;">${resetCode}</span>
+                    </div>
+                    <p><strong>Este código é válido por 15 minutos.</strong></p>
+                    <p style="color: #7f8c8d; font-size: 14px;">Se você não solicitou isso, ignore este e-mail. Sua conta está segura.</p>
+                    <p>Atenciosamente,<br><strong>Equipe 4U Pet</strong></p>
+                </div>
+            `
         };
 
-        //await transporter.sendMail(mailOptions);
-
-        const info = await transporter.sendMail(mailOptions);
-
-        //const previewUrl = nodemailer.getTestMessageUrl(info);
-        //console.log("E-mail de teste enviado! Visualize aqui: %s", previewUrl);
-        
-        console.log('E-mail enviado:', info.messageId);
-
+        await brevo.transactionalEmails.sendTransacEmail(emailData);
+        console.log("E-mail de recuperação enviado com sucesso via Brevo.");
 
         return res.status(200).json({ mensagem: "Se este email estiver cadastrado, você receberá um código." });
 
     } catch (error) {
-        console.error("Erro no forgotSenha:", error);
-        return res.status(500).json({ erro: "Erro interno do servidor" });
+        console.error("Erro no esqueceuSenha:", error);
+        return res.status(500).json({ erro: "Erro interno do servidor ao processar a recuperação." });
     }
 };
 
