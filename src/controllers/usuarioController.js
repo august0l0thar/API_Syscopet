@@ -10,15 +10,12 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const jwt = require('jsonwebtoken');
 
 //configuração nodemailer
-//Ethereal Email cria um e-mail falso de teste e mostra o painel de recebimento.
-//Mudar futuramente para GMAIl
 const transporter = nodemailer.createTransport({
-    host: "smtp.ethereal.email", // Mude para 'smtp.gmail.com' se usar Gmail
-    port: 587,
+    service: 'gmail',
     auth: {
-        user: "jameson.gorczany@ethereal.email", // Use variáveis de ambiente em produção
-        pass: "TCjUspVEYMMPya9cMf"
-    }
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+    },
 });
 
 const getUsuario = (req, res) => {
@@ -341,7 +338,7 @@ const esqueceuSenha = async (req, res) => {
 
         // Enviar o email
         const mailOptions = {
-            from: '4U Pet <nao-responda@4upet.com>',
+            from: `4U Pet <${process.env.EMAIL_USER}>`,
             to: email,
             subject: 'Redefinição de Senha',
             text: `Olá,\nRecebemos uma solicitação para redefinir a senha da sua conta.\nUtilize o código abaixo para criar uma nova senha: \n\n${resetCode}. \n\nEste código é válido por 15 minutos.
@@ -354,9 +351,11 @@ const esqueceuSenha = async (req, res) => {
 
         const info = await transporter.sendMail(mailOptions);
 
-        const previewUrl = nodemailer.getTestMessageUrl(info);
+        //const previewUrl = nodemailer.getTestMessageUrl(info);
+        //console.log("E-mail de teste enviado! Visualize aqui: %s", previewUrl);
+        
+        console.log('E-mail enviado:', info.messageId);
 
-        console.log("E-mail de teste enviado! Visualize aqui: %s", previewUrl);
 
         return res.status(200).json({ mensagem: "Se este email estiver cadastrado, você receberá um código." });
 
