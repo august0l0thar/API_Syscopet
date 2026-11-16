@@ -5,7 +5,7 @@ const addUsuario =
     "INSERT INTO Usuarios (nome, email, senha) VALUES ($1, $2, $3)";
 const deleteUsuario = "DELETE FROM usuarios WHERE id = $1";
 const updateUsuario = "UPDATE usuarios SET senha = $1 WHERE id = $2";
-const getUsuarioByEmail = "SELECT id, nome, email, senha FROM usuarios WHERE email = $1";
+const getUsuarioByEmail = "SELECT id, nome, email, senha, url_foto FROM usuarios WHERE email = $1";
 
 // login com google
 const getUsuarioByGoogleId = "SELECT id, nome, email, google_id FROM usuarios WHERE google_id = $1";
@@ -17,6 +17,17 @@ const getUsuarioIdByEmail = "SELECT id FROM usuarios WHERE email = $1";
 const updateResetToken = "UPDATE usuarios SET reset_token = $1, reset_token_expira_em = $2 WHERE email = $3";
 const getUsuarioWithToken = "SELECT id, email, reset_token, reset_token_expira_em FROM usuarios WHERE email = $1";
 const clearResetToken = "UPDATE usuarios SET reset_token = NULL, reset_token_expira_em = NULL WHERE id = $1";
+
+// update da foto de perfil
+const updateFotoUsuario = async (id, photoUrl) => {
+    console.log('Atualizando foto do usuário:', id, photoUrl);
+    
+    const query = `UPDATE usuarios SET url_foto = $1 WHERE id = $2 RETURNING *`;
+    const values = [photoUrl, id];
+    
+    const result = await db.query(query, values);
+    return result.rows[0];
+};
 
 module.exports = {
     getUsuarios,
@@ -32,4 +43,5 @@ module.exports = {
     updateResetToken,
     getUsuarioWithToken,
     clearResetToken,
+    updateFotoUsuario,
 };

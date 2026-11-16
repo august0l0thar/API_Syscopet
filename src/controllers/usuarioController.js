@@ -2,6 +2,10 @@ const pool = require('../../db');
 const queries = require("../queries/usuarioQueries");
 const bcrypt = require('bcrypt');
 
+// Supabase Storage
+const path = require('path'); 
+const supabase = require('../config/supabaseConfig');
+
 //envio de email
 const { BrevoClient } = require('@getbrevo/brevo');
 // Inicializa o cliente com a chave da API das variáveis de ambiente
@@ -234,7 +238,8 @@ const login = async (req, res) => {
                 user: {
                     id: usuario.id,
                     nome: usuario.nome,
-                    email: usuario.email
+                    email: usuario.email,
+                    url_foto: usuario.url_foto
                 }
             });
         });
@@ -409,6 +414,90 @@ const resetSenha = async (req, res) => {
     }
 };
 
+
+// NOVAS FUNÇÕES DE FOTO DO USUÁRIO
+const uploadFotoUsuario = async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    
+    // Verificar se o usuário existe
+    const usuario = await pool.query(queries.getUsuarioById, [id]);
+    if (!usuario || usuario.rows.length === 0) {
+      return res.status(404).json({ erro: 'Usuário não encontrado' });
+    }
+
+    // Verificar se arquivo foi enviado
+    if (!req.file) {
+      return res.status(400).json({ erro: 'Nenhuma imagem enviada' });
+    }
+
+    // Preparar arquivo
+    const fileBuffer = req.file.buffer;
+    const fileName = `usuario-${id}-${Date.now()}${path.extname(req.file.originalname)}`;
+    
+    // Upload para o Supabase Storage
+    const { data, error } = await supabase.storage
+      .from('fotos-usuarios') // <-- Nome do bucket novo
+      .upload(fileName, fileBuffer, {
+        contentType: req.file.mimetype,
+        upsert: true
+      });
+
+    if (error) {
+      console.error('Erro no upload:', error);
+      return res.status(500).json({ erro: 'Erro ao fazer upload da imagem' });
+    }
+
+    // Gerar URL pública
+    const { data: { publicUrl } } = supabase.storage
+      .from('fotos-usuarios')
+      .getPublicUrl(fileName);
+
+    // Atualizar o usuário com a URL da foto no banco de dados
+    await queries.updateFotoUsuario(id, publicUrl); 
+
+    res.json({
+      mensagem: 'Foto enviada com sucesso!',
+      photoUrl: publicUrl,
+      usuario: { id: id }
+    });
+
+  } catch (error) {
+    console.error('Erro no uploadFotoUsuario:', error);
+    res.status(500).json({ erro: 'Erro interno do servidor' });
+  }
+};
+
+const deleteFotoUsuario = async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+
+    // Buscar URL atual da foto
+    const usuario = await pool.query(queries.getUsuarioById, [id]);
+    
+    if (!usuario || usuario.rows.length === 0) {
+      return res.status(404).json({ erro: 'Usuário não encontrado' });
+    }
+
+    const photoUrl = usuario.rows[0].url_foto;
+    
+    // Se tiver foto, deletar do storage
+    if (photoUrl) {
+      const fileName = photoUrl.split('/').pop();
+      await supabase.storage.from('fotos-usuarios').remove([fileName]);
+    }
+
+    // Atualizar banco para null
+    await queries.updateFotoUsuario(id, null);
+
+    res.json({ mensagem: 'Foto removida com sucesso!' });
+
+  } catch (error) {
+    console.error('Erro no deleteFotoUsuario:', error);
+    res.status(500).json({ erro: 'Erro interno do servidor' });
+  }
+};
+
 module.exports = {
     getUsuario,
     getUsuarioById,
@@ -419,4 +508,6 @@ module.exports = {
     loginGoogle,
     esqueceuSenha,
     resetSenha,
+    uploadFotoUsuario,
+    deleteFotoUsuario,
 };

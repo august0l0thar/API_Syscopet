@@ -2,6 +2,7 @@ const { Router } = require('express');
 const controller = require('../controllers/usuarioController');
 const router = Router();
 const rateLimit = require('express-rate-limit');
+const upload = require('../middleware/upload');
 
 // == RATE LIMIT  ==
 // Limitador específico para Login (ex: X tentativas a cada Y minutos)
@@ -30,6 +31,10 @@ router.post("/login", loginLimiter, controller.login);
 router.post('/login-google', controller.loginGoogle);
 router.post('/esqueceu-senha', forgotPasswordLimiter, controller.esqueceuSenha);
 router.post('/reset-senha', controller.resetSenha);
+
+// Upload e delete de foto do usuário
+router.post('/:id/foto', upload.single('foto'), controller.uploadFotoUsuario);
+router.delete('/:id/foto', controller.deleteFotoUsuario);
 
 router.get("/", controller.getUsuario);
 router.post("/", controller.addUsuario);
