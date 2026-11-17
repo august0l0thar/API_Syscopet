@@ -250,7 +250,7 @@ const login = async (req, res) => {
 };
 
 const loginGoogle = async (req, res) => {
-    const { idToken } = req.body;
+     const { idToken } = req.body;
 
     if (!idToken) {
         return res.status(400).json({ erro: "Token do Google é obrigatório" });
@@ -267,28 +267,75 @@ const loginGoogle = async (req, res) => {
         const googleId = payload['sub'];
         const email = payload['email'];
         const nome = payload['name'];
-        const foto = payload['picture'];
+        const fotoGoogleUrl = payload['picture']; 
 
         // Busca usuário pelo google_id
         const resultGoogle = await pool.query(queries.getUsuarioByGoogleId, [googleId]);
         let usuario = resultGoogle.rows[0];
 
         if (usuario) {
-            // Cenário A: Usuário já existe e já tem o Google vinculado. Tudo certo.
+            // Cenário A: Usuário já existe e já tem o Google vinculado.
         } else {
-            // Cenário B: Usuário não tem google_id, mas e se o EMAIL já existir no banco?
-            // (Ex: Ele se cadastrou com senha antes, e agora quer usar o botão do Google)
+            // Cenário B: Usuário não tem google_id, mas e se o EMAIL já existir?
             const resultEmail = await pool.query(queries.getUsuarioByEmail, [email]);
             
             if (resultEmail.rows.length > 0) {
                 usuario = resultEmail.rows[0];
-                
-                // Vincula o google_id a esta conta existente para os próximos logins
+                // Vincula o google_id a esta conta existente
                 await pool.query(queries.updateUsuarioGoogleId, [googleId, usuario.id]);
             } else {
                 // Cenário C: Conta totalmente nova. Cria o usuário.
                 const insertResult = await pool.query(queries.addUsuarioGoogle, [nome, email, googleId]);
                 usuario = insertResult.rows[0];
+            }
+        }
+
+        // GARANTIR QUE TEMOS A url_foto (caso a query anterior não tenha retornado)
+        if (!usuario.url_foto) {
+            const fullUser = await pool.query("SELECT url_foto FROM usuarios WHERE id = $1", [usuario.id]);
+            usuario.url_foto = fullUser.rows[0]?.url_foto || null;
+        }
+
+        // Se o usuário NÃO tem foto no nosso sistema, mas o Google forneceu uma, vamos salvá-la!
+        if (!usuario.url_foto && fotoGoogleUrl) {
+            try {
+                console.log(`Baixando foto do Google para o usuário ${usuario.id}...`);
+                
+                // Baixa a imagem da URL do Google
+                const response = await fetch(fotoGoogleUrl);
+                if (response.ok) {
+                    const arrayBuffer = await response.arrayBuffer();
+                    const buffer = Buffer.from(arrayBuffer);
+                    
+                    const fileName = `usuario-${usuario.id}-${Date.now()}.jpg`; 
+
+                    // Faz o upload para o seu bucket
+                    const { error: uploadError } = await supabase.storage
+                        .from('fotos-usuarios')
+                        .upload(fileName, buffer, {
+                            contentType: 'image/jpeg',
+                            upsert: true
+                        });
+
+                    if (!uploadError) {
+                        // Gera a URL pública
+                        const { data: { publicUrl } } = supabase.storage
+                            .from('fotos-usuarios')
+                            .getPublicUrl(fileName);
+
+                        // Salva no banco de dados
+                        await queries.updateFotoUsuario(usuario.id, publicUrl);
+                        
+                        // Atualiza o objeto local para retornar na resposta
+                        usuario.url_foto = publicUrl;
+                        console.log("Foto do Google salva no Supabase com sucesso!");
+                    } else {
+                        console.error("Erro ao salvar foto do Google no Supabase:", uploadError);
+                    }
+                }
+            } catch (err) {
+                // Erro não fatal: se falhar ao baixar/salvar a foto, o login ainda acontece, só sem a foto
+                console.error("Erro ao processar foto do Google (login continuará sem foto):", err);
             }
         }
 
@@ -305,7 +352,8 @@ const loginGoogle = async (req, res) => {
             usuario: { 
                 id: parseInt(usuario.id), 
                 nome: usuario.nome, 
-                email: usuario.email 
+                email: usuario.email,
+                url_foto: usuario.url_foto
             }
         });
 
