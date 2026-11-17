@@ -6,9 +6,12 @@ const cors = require("cors");
 // Biblioteca de rate limiting das requisições
 const rateLimit = require('express-rate-limit');
 
+// Arquivos de rotas
 const usuarioRoutes = require('./src/routes/usuarioRoutes');
 const petRoutes = require('./src/routes/petRoutes');
 const vacinaRoutes = require('./src/routes/vacinaRoutes');
+const chatRoutes = require('./src/routes/chatRoutes');
+
 
 // == INICIALIZAÇÃO DO APP ==
 const app = express();
@@ -52,5 +55,6 @@ app.get("/", (req, res) => {
 app.use('/api/v1/usuarios', usuarioRoutes);
 app.use('/api/v1/pets', petRoutes);
 app.use('/api/v1/vacinas', vacinaRoutes);
+app.use('/api/v1/chat', chatRoutes);
 
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
