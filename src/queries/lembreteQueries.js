@@ -10,6 +10,8 @@ const deleteLembrete = "DELETE FROM lembretes WHERE id = $1";
 
 const mudarEstado = "UPDATE lembretes SET ativo = $1 WHERE id = $2";
 
+const marcarConcluido = "UPDATE lembretes SET concluido = $1 WHERE id = $2 RETURNING *";
+
 module.exports = {
     getLembretePet,
     getLembreteById,
@@ -17,4 +19,5 @@ module.exports = {
     updateLembrete,
     deleteLembrete,
     mudarEstado,
+    marcarConcluido,
 }

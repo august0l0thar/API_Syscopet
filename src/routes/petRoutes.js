@@ -14,6 +14,9 @@ router.post("/lembretes", lembreteController.addLembrete);
 router.get("/lembretes/:id", lembreteController.getLembretePet);
 router.put("/lembretes/:id", lembreteController.updateLembrete);
 router.delete("/lembretes/:id", lembreteController.deleteLembrete);
+//concluir lembrete
+router.patch("/lembretes/:id/concluir", lembreteController.marcarConcluido);
+
 
 router.get("/lembretes/ocorrencias/:id", lembreteController.getOcorrenciasLembrete);
 
